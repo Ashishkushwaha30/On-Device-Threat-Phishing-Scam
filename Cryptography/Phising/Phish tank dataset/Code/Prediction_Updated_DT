@@ -1,0 +1,482 @@
+
+import os
+import re
+import json
+import joblib
+
+import pandas as pd
+import tldextract
+
+from urllib.parse import urlparse
+from rapidfuzz import process, fuzz
+
+
+# ============================================================
+# 1. PATHS AND CONFIGURATION
+# ============================================================
+
+BASE_DIR = (
+    r"C:\Users\Lenovo\Desktop\Cryptography"
+    r"\Phising\Phish tank dataset"
+)
+
+MODEL_DIR = os.path.join(
+    BASE_DIR,
+    "Decision Tree Brand Detection Validated"
+)
+
+MODEL_FILE = os.path.join(
+    MODEL_DIR,
+    "decision_tree_brand_model.pkl"
+)
+
+FEATURE_FILE = os.path.join(
+    MODEL_DIR,
+    "feature_names.json"
+)
+
+BRAND_FILE = os.path.join(
+    MODEL_DIR,
+    "brand_library.json"
+)
+
+# Offline public suffix list
+extractor = tldextract.TLDExtract(
+    suffix_list_urls=None
+)
+
+
+# ============================================================
+# 2. LOAD SAVED MODEL AND FILES
+# ============================================================
+
+print("\nLoading trained Decision Tree model...")
+
+model = joblib.load(MODEL_FILE)
+
+with open(FEATURE_FILE, "r") as file:
+    FEATURE_COLUMNS = json.load(file)
+
+with open(BRAND_FILE, "r") as file:
+    brands = json.load(file)
+
+brand_set = set(brands)
+
+print("Model loaded successfully.")
+print("Total brands loaded:", len(brands))
+print("Total features:", len(FEATURE_COLUMNS))
+
+
+# ============================================================
+# 3. CREATE BRAND INDEX
+# ============================================================
+
+brand_index = {}
+
+for brand in brands:
+
+    if not brand:
+        continue
+
+    first_char = brand[0]
+
+    brand_index.setdefault(
+        first_char, []
+    ).append(brand)
+
+
+# ============================================================
+# 4. NORMALIZATION FUNCTION
+# ============================================================
+
+def normalize_brand(value):
+
+    return re.sub(
+        r"[^a-z0-9]",
+        "",
+        str(value).lower().strip()
+    )
+
+
+# ============================================================
+# 5. URL CLEANING FUNCTION
+# ============================================================
+
+# ============================================================
+# URL CLEANING FUNCTION
+# ============================================================
+
+def clean_url(url):
+
+    if pd.isna(url):
+        return ""
+
+    url = str(url).strip().lower()
+
+    # Remove HTTP and HTTPS protocols
+    url = re.sub(r"^https?://", "", url)
+
+    # Remove www prefix
+    url = re.sub(r"^www\.", "", url)
+
+    # Remove trailing slash(es)
+    url = url.rstrip("/")
+
+    return url
+
+
+# ============================================================
+# 6. DOMAIN EXTRACTION
+# ============================================================
+
+def extract_domain_parts(url):
+
+    cleaned_url = clean_url(url)
+
+    if not cleaned_url:
+        return "", ""
+
+    try:
+
+        parsed = urlparse(
+            "http://" + cleaned_url
+        )
+
+        hostname = parsed.hostname or ""
+
+        hostname = hostname.lower().strip(".")
+
+        extracted = extractor(hostname)
+
+        domain_name = extracted.domain or ""
+
+        return hostname, domain_name
+
+    except Exception:
+
+        return "", ""
+
+
+# ============================================================
+# 7. BRAND SIMILARITY
+# ============================================================
+
+def calculate_brand_similarity(domain_name):
+
+    domain_name = normalize_brand(domain_name)
+
+    if not domain_name:
+        return 0.0
+
+    candidates = brand_index.get(
+        domain_name[0], []
+    )
+
+    if not candidates:
+        return 0.0
+
+    result = process.extractOne(
+        domain_name,
+        candidates,
+        scorer=fuzz.ratio,
+        score_cutoff=0
+    )
+
+    if result is None:
+        return 0.0
+
+    best_brand, similarity_score, _ = result
+
+    return similarity_score / 100.0
+
+
+# ============================================================
+# 8. FEATURE EXTRACTION
+# ============================================================
+
+def extract_features(url):
+
+    # Clean URL before feature extraction
+    raw_url = clean_url(url)
+
+    hostname, domain_name = extract_domain_parts(
+        raw_url
+    )
+
+    # Parse cleaned URL
+    try:
+
+        parsed = urlparse(
+            "http://" + raw_url
+        )
+
+        path = parsed.path or ""
+
+    except Exception:
+
+        path = ""
+
+    # --------------------------------------------------------
+    # Basic URL features
+    # --------------------------------------------------------
+
+    url_length = len(raw_url)
+
+    hostname_length = len(hostname)
+
+    dot_count = raw_url.count(".")
+
+    hyphen_count = raw_url.count("-")
+
+    at_count = raw_url.count("@")
+
+    digit_count = sum(
+        character.isdigit()
+        for character in raw_url
+    )
+
+    subdomain_count = (
+        max(0, len(hostname.split(".")) - 2)
+        if hostname else 0
+    )
+
+    path_length = len(path)
+
+    # --------------------------------------------------------
+    # Brand features
+    # --------------------------------------------------------
+
+    normalized_domain = normalize_brand(
+        domain_name
+    )
+
+    brand_similarity = calculate_brand_similarity(
+        normalized_domain
+    )
+
+    exact_brand_match = int(
+        normalized_domain in brand_set
+        if normalized_domain else False
+    )
+
+    candidates = brand_index.get(
+        normalized_domain[0], []
+    ) if normalized_domain else []
+
+    brand_substring_match = int(
+        any(
+            len(brand) >= 4 and
+            brand in normalized_domain
+            for brand in candidates
+        )
+    )
+
+    # --------------------------------------------------------
+    # Return all features
+    # --------------------------------------------------------
+
+    return {
+
+        "url_length": url_length,
+
+        "hostname_length": hostname_length,
+
+        "dot_count": dot_count,
+
+        "hyphen_count": hyphen_count,
+
+        "at_count": at_count,
+
+        "digit_count": digit_count,
+
+        "subdomain_count": subdomain_count,
+
+        "path_length": path_length,
+
+        "brand_similarity": brand_similarity,
+
+        "exact_brand_match": exact_brand_match,
+
+        "brand_substring_match": brand_substring_match
+    }
+
+
+# ============================================================
+# 9. PREDICT URL
+# ============================================================
+
+def predict_url(url):
+
+    # Extract features from cleaned URL
+    features = extract_features(url)
+
+    # Convert features into DataFrame
+    input_df = pd.DataFrame(
+        [features],
+        columns=FEATURE_COLUMNS
+    )
+
+    # Prediction
+    prediction = model.predict(input_df)[0]
+
+    probabilities = model.predict_proba(input_df)[0]
+
+    # Get probabilities using actual class positions
+    legitimate_probability = probabilities[
+        list(model.classes_).index(0)
+    ]
+
+    phishing_probability = probabilities[
+        list(model.classes_).index(1)
+    ]
+
+    # Extract domain
+    hostname, domain_name = extract_domain_parts(url)
+
+    # Output
+    print("\n======================================")
+    print("          URL ANALYSIS RESULT")
+    print("======================================")
+
+    print("\nOriginal URL:")
+    print(url)
+
+    print("\nCleaned URL:")
+    print(clean_url(url))
+
+    print("\nExtracted Hostname:")
+    print(hostname)
+
+    print("\nExtracted Domain:")
+    print(domain_name)
+
+    print("\nBrand Similarity:")
+    print(
+        round(
+            features["brand_similarity"] * 100,
+            2
+        ),
+        "%"
+    )
+
+    print("\nExact Brand Match:")
+    print(
+        "Yes" if features["exact_brand_match"] else "No"
+    )
+
+    print("\nBrand Substring Match:")
+    print(
+        "Yes" if features["brand_substring_match"] else "No"
+    )
+
+    print("\n--------------------------------------")
+
+    if prediction == 1:
+
+        print("PREDICTION: PHISHING")
+
+    else:
+
+        print("PREDICTION: LEGITIMATE")
+
+    print("--------------------------------------")
+
+    print(
+        "Legitimate Probability:",
+        round(legitimate_probability * 100, 2),
+        "%"
+    )
+
+    print(
+        "Phishing Probability:",
+        round(phishing_probability * 100, 2),
+        "%"
+    )
+
+    print("======================================")
+
+    return prediction
+
+
+# ============================================================
+# 10. USER INPUT LOOP
+# ============================================================
+
+print("\n======================================")
+print("       PHISHING URL DETECTION")
+print("======================================")
+
+print("Enter a URL to check.")
+print("Type 'exit' to close the program.")
+
+while True:
+
+    user_url = input(
+        "\nEnter URL: "
+    ).strip()
+
+    if user_url.lower() == "exit":
+
+        print("\nProgram terminated.")
+
+        break
+
+    if not user_url:
+
+        print("Please enter a valid URL.")
+
+        continue
+
+    try:
+
+        predict_url(user_url)
+
+    except Exception as error:
+
+        print("\nPrediction error:", error)
+
+test_url = "https://chatgpt.com/c/6aef20b1-fd38-83ee-99b2-f841c34deb6d"; features = extract_features(test_url); print(pd.DataFrame([features]).T)
+
+print(model.predict(pd.DataFrame([features], columns=FEATURE_COLUMNS))); print(model.decision_path(pd.DataFrame([features], columns=FEATURE_COLUMNS)).toarray())
+
+print("\n".join(f"Node {i}: {FEATURE_COLUMNS[model.tree_.feature[i]] if model.tree_.feature[i] >= 0 else 'LEAF'} <= {model.tree_.threshold[i]:.4f}" for i in [0, 30, 70]))
+
+test_url = "https://chatgpt.com/c/6aef20b1-fd38-83ee-99b2-f841c34deb6d"
+
+features = extract_features(test_url)
+
+input_df = pd.DataFrame([features], columns=FEATURE_COLUMNS)
+
+from sklearn.tree import _tree
+
+def print_decision_path(model, input_df, feature_names):
+    tree = model.tree_
+    node_indicator = model.decision_path(input_df)
+    leaf_id = model.apply(input_df)[0]
+
+    node_ids = node_indicator.indices[
+        node_indicator.indptr[0]:node_indicator.indptr[1]
+    ]
+
+    for node_id in node_ids:
+        if node_id == leaf_id:
+            print(f"Node {node_id}: LEAF")
+            print("Predicted class:", model.classes_[tree.value[node_id][0].argmax()])
+            continue
+
+        feature = feature_names[tree.feature[node_id]]
+        threshold = tree.threshold[node_id]
+        value = input_df.iloc[0][feature]
+
+        decision = "<=" if value <= threshold else ">"
+
+        print(
+            f"Node {node_id}: {feature} = {value:.4f} "
+            f"{decision} {threshold:.4f}"
+        )
+
+print_decision_path(model, input_df, FEATURE_COLUMNS)
+
+leaf_id = model.apply(input_df)[0]; print("Leaf ID:", leaf_id); print("Training samples in leaf:", model.tree_.n_node_samples[leaf_id]); print("Class distribution:", model.tree_.value[leaf_id][0])
+
+print(pd.crosstab((final_df["url_length"] > 20.5) & (final_df["path_length"] > 0.5), final_df["target"], rownames=["Long URL with path"], colnames=["Class"]))

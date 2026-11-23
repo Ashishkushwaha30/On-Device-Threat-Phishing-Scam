@@ -1,0 +1,36 @@
+{
+    "model": "DecisionTreeClassifier",
+    "criterion": "gini",
+    "test_split": "StratifiedGroupKFold",
+    "cross_validation": "StratifiedGroupKFold",
+    "selection_metric": "f1",
+    "random_state": 42,
+    "feature_columns": [
+        "url_length",
+        "hostname_length",
+        "dot_count",
+        "hyphen_count",
+        "at_count",
+        "digit_count",
+        "subdomain_count",
+        "path_length",
+        "brand_similarity",
+        "exact_brand_match",
+        "brand_substring_match"
+    ],
+    "brand_features_retained": [
+        "brand_similarity",
+        "exact_brand_match",
+        "brand_substring_match"
+    ],
+    "brand_matching": "First-character indexed RapidFuzz similarity, exact match, and indexed substring match",
+    "brand_library_file": "brand_lib.csv",
+    "brand_column": "domain_name",
+    "url_column": "url",
+    "target_column": "target",
+    "best_parameters": {
+        "max_depth": 15,
+        "min_samples_leaf": 1,
+        "min_samples_split": 2
+    }
+}

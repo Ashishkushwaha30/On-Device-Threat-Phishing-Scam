@@ -1,0 +1,17 @@
+Feature,Importance
+num__path_length,0.34305969945446063
+num__token_count,0.1721918651033292
+num__https_flag,0.13571571715603245
+num__percentage_numeric_chars,0.11553277963004532
+num__number_of_digits,0.09738807846859003
+num__dot_count,0.044342245774230134
+num__subdomain_count,0.022506903252170623
+num__tld_length,0.019962857341585483
+num__has_ip_address,0.019086990484537537
+num__domain_name_length,0.011712632676481293
+num__url_length,0.00965660163677837
+num__url_entropy,0.003962690653755899
+num__suspicious_file_extension,0.003262657487421663
+num__tld_popularity,0.0012784595930040012
+num__has_hyphen_in_domain,0.00017642446318405966
+num__query_param_count,0.00016339682439338662

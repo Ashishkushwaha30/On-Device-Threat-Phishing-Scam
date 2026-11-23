@@ -1,0 +1,5 @@
+Total_URLs_Processed: 1000000
+Valid_Domain_Extractions: 999989
+Unique_Registered_Domains: 999989
+Duplicate_Extractions: 0
+Output_File: C:\Users\Lenovo\Desktop\Cryptography\Phising\Phish tank dataset\Legitimate Domain Library\brand_lib.csv

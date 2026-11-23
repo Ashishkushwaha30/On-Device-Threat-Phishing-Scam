@@ -1,0 +1,10 @@
+[
+    "url_length",
+    "hostname_length",
+    "dot_count",
+    "hyphen_count",
+    "at_count",
+    "digit_count",
+    "subdomain_count",
+    "path_length"
+]

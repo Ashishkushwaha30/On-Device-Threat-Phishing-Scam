@@ -1,0 +1,12 @@
+Feature,Importance
+url_length,0.846903224595363
+subdomain_count,0.060348466526548204
+brand_similarity,0.0398797655426416
+path_length,0.034105211722986827
+hostname_length,0.018559127950764427
+dot_count,0.000191229922526294
+digit_count,8.7743587912129e-06
+brand_substring_match,4.199380378241456e-06
+at_count,0.0
+hyphen_count,0.0
+exact_brand_match,0.0

@@ -1,0 +1,12 @@
+Model: Decision Tree
+Train_Test_Split: 80:20
+Training_Samples: 79998
+Testing_Samples: 20000
+Number_of_Features: 8
+Criterion: Gini
+Tree_Depth: 16
+Number_of_Leaves: 307
+Accuracy: 0.99145
+Precision: 0.9984785475200325
+Recall: 0.9844
+F1_Score: 0.9913892945264112

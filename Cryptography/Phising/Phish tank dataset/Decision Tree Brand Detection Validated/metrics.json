@@ -1,0 +1,31 @@
+{
+    "training": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "roc_auc": 1.0
+    },
+    "testing": {
+        "accuracy": 0.99994991736365,
+        "precision": 0.9998996789727127,
+        "recall": 1.0,
+        "f1_score": 0.999949836970153,
+        "roc_auc": 0.99995
+    },
+    "best_cross_validation_f1": 0.9999498338242478,
+    "best_parameters": {
+        "max_depth": 15,
+        "min_samples_leaf": 1,
+        "min_samples_split": 2
+    },
+    "training_samples": 79866,
+    "testing_samples": 19967,
+    "number_of_features": 11,
+    "number_of_brands": 867570,
+    "tree_depth": 12,
+    "tree_leaves": 36,
+    "train_test_url_group_overlap": 0,
+    "conflicting_url_groups_excluded": 0,
+    "duplicate_url_rows_removed": 165
+}

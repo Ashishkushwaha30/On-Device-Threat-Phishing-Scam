@@ -1,0 +1,16 @@
+Model: Decision Tree + Mutual Information
+Feature_Selection: SelectKBest
+Train_Test_Split: 80:20
+Cross_Validation: 5-Fold
+Training_Samples: 16000
+Testing_Samples: 4000
+Original_Features: 78
+Selected_Features: 78
+Best_CV_F1_Score: 0.9949
+Criterion: Gini
+Tree_Depth: 23
+Number_of_Leaves: 112
+Accuracy: 0.9952
+Precision: 0.9954
+Recall: 0.9950
+F1_Score: 0.9952
